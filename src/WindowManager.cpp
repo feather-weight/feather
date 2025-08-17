@@ -22,6 +22,7 @@
 #include "utils/os/tails.h"
 #include "utils/os/whonix.h"
 #include "utils/TorManager.h"
+#include "utils/I2PManager.h"
 #include "utils/WebsocketNotifier.h"
 #include "utils/AppData.h"
 
@@ -107,6 +108,7 @@ void WindowManager::close() {
     }
 
     torManager()->stop();
+    i2pManager()->stop();
 
     deleteLater();
 
@@ -685,6 +687,12 @@ void WindowManager::onProxySettingsChanged() {
     torManager()->init();
     torManager()->start();
 
+    i2pManager()->stop();
+    if (conf()->get(Config::proxy).toInt() == Config::Proxy::i2p) {
+        i2pManager()->init();
+        i2pManager()->start();
+    }
+
     QNetworkProxy proxy{QNetworkProxy::NoProxy};
     if (conf()->get(Config::proxy).toInt() != Config::Proxy::None) {
         QString host = conf()->get(Config::socks5Host).toString();
@@ -693,6 +701,9 @@ void WindowManager::onProxySettingsChanged() {
         if (conf()->get(Config::proxy).toInt() == Config::Proxy::Tor && (!torManager()->isLocalTor() || torManager()->isAlreadyRunning())) {
             host = torManager()->featherTorHost;
             port = torManager()->featherTorPort;
+        } else if (conf()->get(Config::proxy).toInt() == Config::Proxy::i2p && i2pManager()->isRunning()) {
+            host = i2pManager()->i2pHost;
+            port = i2pManager()->i2pPort;
         }
 
         proxy = QNetworkProxy{QNetworkProxy::Socks5Proxy, host, port};
